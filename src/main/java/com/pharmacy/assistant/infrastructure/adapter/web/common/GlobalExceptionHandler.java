@@ -1,6 +1,9 @@
 package com.pharmacy.assistant.infrastructure.adapter.web.common;
 
+import com.pharmacy.assistant.domain.exception.DuplicateBarcodeException;
+import com.pharmacy.assistant.domain.exception.InvalidProductDataException;
 import com.pharmacy.assistant.domain.exception.PatientNotFoundException;
+import com.pharmacy.assistant.domain.exception.ProductNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,5 +50,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Bir hata oluştu: " + ex.getMessage()));
+    }
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleProductNotFound(ProductNotFoundException ex) {
+        log.error("Product not found: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateBarcodeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateBarcode(DuplicateBarcodeException ex) {
+        log.error("Duplicate barcode: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidProductDataException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidProductData(InvalidProductDataException ex) {
+        log.error("Invalid product data: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
     }
 }
