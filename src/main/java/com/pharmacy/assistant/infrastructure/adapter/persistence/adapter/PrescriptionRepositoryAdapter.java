@@ -72,19 +72,25 @@ public class PrescriptionRepositoryAdapter implements PrescriptionRepository {
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
-
     @Override
     public List<Prescription> findExpiringSoon(int daysThreshold) {
         LocalDate today = LocalDate.now();
         LocalDate thresholdDate = today.plusDays(daysThreshold);
-        return jpaRepository.findExpiringSoon(today, thresholdDate).stream()
+        return jpaRepository.findExpiringSoon(
+                        PrescriptionStatus.ACTIVE, // ✅ Enum gönderiyoruz
+                        today,
+                        thresholdDate
+                ).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Prescription> findExpiredPrescriptions() {
-        return jpaRepository.findExpiredPrescriptions(LocalDate.now()).stream()
+        return jpaRepository.findExpiredPrescriptions(
+                        LocalDate.now(),
+                        PrescriptionStatus.EXPIRED // ✅ Enum gönderiyoruz
+                ).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }

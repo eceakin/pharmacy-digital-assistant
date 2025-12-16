@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 @Repository
 public interface PrescriptionJpaRepository extends JpaRepository<PrescriptionEntity, UUID> {
 
@@ -21,23 +20,45 @@ public interface PrescriptionJpaRepository extends JpaRepository<PrescriptionEnt
 
     List<PrescriptionEntity> findByStatus(PrescriptionStatus status);
 
-    // Aktif reçeteler
     List<PrescriptionEntity> findByPatientIdAndStatus(UUID patientId, PrescriptionStatus status);
 
-    // Belirli tarihler arasında bitiş tarihi olanlar
     List<PrescriptionEntity> findByEndDateBetween(LocalDate startDate, LocalDate endDate);
 
-    // Süresi yaklaşanlar: Durumu ACTIVE olan VE Bitiş tarihi bugün ile eşik tarih arasında olanlar
-    @Query("SELECT p FROM PrescriptionEntity p WHERE p.status = 'ACTIVE' AND p.endDate BETWEEN :today AND :thresholdDate")
-    List<PrescriptionEntity> findExpiringSoon(@Param("today") LocalDate today, @Param("thresholdDate") LocalDate thresholdDate);
+    // ✅ İyileştirilmiş: Enum parametresi kullanımı
+    @Query("SELECT p FROM PrescriptionEntity p WHERE " +
+            "p.status = :status AND p.endDate BETWEEN :today AND :thresholdDate")
+    List<PrescriptionEntity> findExpiringSoon(
+            @Param("status") PrescriptionStatus status,
+            @Param("today") LocalDate today,
+            @Param("thresholdDate") LocalDate thresholdDate
+    );
 
-    // Süresi dolmuşlar: Bitiş tarihi bugünden önce olanlar (veya statüsü EXPIRED olanlar)
-    @Query("SELECT p FROM PrescriptionEntity p WHERE p.endDate < :today AND p.status = 'ACTIVE'")
-    List<PrescriptionEntity> findExpiredPrescriptions(@Param("today") LocalDate today);
+    // ✅ İyileştirilmiş: Hem süresi geçmiş aktifler hem EXPIRED statüsündekiler
+    @Query("SELECT p FROM PrescriptionEntity p WHERE " +
+            "p.endDate < :today OR p.status = :expiredStatus")
+    List<PrescriptionEntity> findExpiredPrescriptions(
+            @Param("today") LocalDate today,
+            @Param("expiredStatus") PrescriptionStatus expiredStatus
+    );
+
+    // ✅ Yeni: Refill hakkı kalanlar
+    @Query("SELECT p FROM PrescriptionEntity p WHERE " +
+            "p.status = :status AND p.refillsRemaining > 0")
+    List<PrescriptionEntity> findWithRefillsRemaining(
+            @Param("status") PrescriptionStatus status
+    );
 
     boolean existsByPrescriptionNumber(String prescriptionNumber);
 
     long countByPatientId(UUID patientId);
 
     long countByStatus(PrescriptionStatus status);
+
+    // ✅ Yeni: Belirli tarihte süresi dolacak reçete sayısı
+    @Query("SELECT COUNT(p) FROM PrescriptionEntity p WHERE " +
+            "p.status = :status AND p.endDate = :date")
+    long countExpiringOnDate(
+            @Param("status") PrescriptionStatus status,
+            @Param("date") LocalDate date
+    );
 }
