@@ -40,6 +40,7 @@ public class NotificationService implements ManageNotificationUseCase {
     private final StockRepository stockRepository;
     private final ProductRepository productRepository;
     private final NotificationMapper notificationMapper;
+    private  final  EmailService emailService;
 
     @Override
     public NotificationResponse createNotification(CreateNotificationRequest request) {
@@ -258,8 +259,19 @@ public class NotificationService implements ManageNotificationUseCase {
         }
 
         try {
-            // Burada gerçek SMS/Email gönderimi yapılır
-            // Şimdilik sadece durum değişimi yapıyoruz
+            // 📧 GERÇEK EMAIL GÖNDERİMİ
+            if (notification.getChannel() == NotificationChannel.EMAIL) {
+                sendEmailNotification(notification);
+            }
+            // 📱 SMS GÖNDERİMİ (şimdilik log)
+            else if (notification.getChannel() == NotificationChannel.SMS) {
+                sendSmsNotification(notification);
+            }
+            // 🖥️ SİSTEM BİLDİRİMİ
+            else if (notification.getChannel() == NotificationChannel.SYSTEM) {
+                log.info("System notification logged: {}", notification.getMessage());
+            }
+
             notification.markAsSent();
             notificationRepository.save(notification);
 
@@ -270,6 +282,121 @@ public class NotificationService implements ManageNotificationUseCase {
             notificationRepository.save(notification);
             throw new NotificationSendException("Bildirim gönderilemedi: " + e.getMessage());
         }
+    }
+
+// Yeni private metodlar ekleyin:
+
+    /**
+     * Sends email notification using EmailService
+     */
+    private void sendEmailNotification(Notification notification) {
+        log.info("Sending email notification to: {}", notification.getRecipient());
+
+        if (notification.getRecipient() == null || notification.getRecipient().isEmpty()) {
+            throw new NotificationSendException("Email adresi bulunamadı");
+        }
+
+        // Bildirim türüne göre özel email şablonları kullan
+        if (notification.getType() == NotificationType.MEDICATION_REMINDER ||
+                notification.getType() == NotificationType.MEDICATION_REFILL) {
+
+            // İlaç adı ve doz bilgisini message'dan parse et (basit örnek)
+            emailService.sendHtmlEmail(
+                    notification.getRecipient(),
+                    notification.getTitle(),
+                    buildEmailContent(notification)
+            );
+        }
+        else if (notification.getType() == NotificationType.PRESCRIPTION_EXPIRY) {
+            // Reçete bilgilerini parse et
+            emailService.sendHtmlEmail(
+                    notification.getRecipient(),
+                    notification.getTitle(),
+                    buildEmailContent(notification)
+            );
+        }
+        else {
+            // Genel bildirim
+            emailService.sendHtmlEmail(
+                    notification.getRecipient(),
+                    notification.getTitle(),
+                    buildEmailContent(notification)
+            );
+        }
+
+        log.info("Email sent successfully to: {}", notification.getRecipient());
+    }
+
+    /**
+     * Sends SMS notification (simulated for now)
+     */
+    private void sendSmsNotification(Notification notification) {
+        log.info("Sending SMS notification to: {}", notification.getRecipient());
+
+        // TODO: Gerçek SMS servisi entegrasyonu yapılabilir
+        // Şimdilik sadece log atıyoruz
+        log.info("SMS would be sent to {}: {}",
+                notification.getRecipient(),
+                notification.getMessage());
+    }
+
+    /**
+     * Builds HTML email content from notification
+     */
+    private String buildEmailContent(Notification notification) {
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                         color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .message-box { background: white; padding: 20px; margin: 20px 0; 
+                               border-left: 4px solid #667eea; border-radius: 5px; }
+                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>%s</h1>
+                </div>
+                <div class="content">
+                    <div class="message-box">
+                        <p>%s</p>
+                    </div>
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p>Sağlıklı günler dileriz! 💚</p>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Bu otomatik bir bildirimdir.</p>
+                    <p>© 2024 Eczane Dijital Asistan</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """.formatted(
+                getNotificationIcon(notification.getType()) + " " + notification.getTitle(),
+                notification.getMessage().replace("\n", "<br>")
+        );
+    }
+
+    /**
+     * Gets appropriate icon for notification type
+     */
+    private String getNotificationIcon(NotificationType type) {
+        return switch (type) {
+            case MEDICATION_REMINDER, MEDICATION_REFILL -> "💊";
+            case MEDICATION_EXPIRY -> "⏰";
+            case PRESCRIPTION_EXPIRY, PRESCRIPTION_RENEWAL -> "📋";
+            case STOCK_LOW, STOCK_EXPIRY -> "📦";
+            case GENERAL -> "ℹ️";
+        };
     }
 
     @Override
