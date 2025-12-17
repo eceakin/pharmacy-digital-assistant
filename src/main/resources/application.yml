@@ -45,7 +45,7 @@ server:
 logging:
   level:
     com.pharmacy.assistant: DEBUG
-    org.springframework.web: INFO
+    org.springframework.web: DEBUG
 
   pharmacy:
     email:
