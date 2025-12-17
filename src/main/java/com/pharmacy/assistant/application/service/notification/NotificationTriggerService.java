@@ -19,10 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Notification Trigger Service
- * Checks and creates notifications for expiring medications and prescriptions
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,219 +33,166 @@ public class NotificationTriggerService {
     private final ManageNotificationUseCase notificationUseCase;
     private final EmailService emailService;
 
-    /**
-     * Checks all medications and creates notifications for expiring ones
-     * Returns count of notifications created
-     */
     @Transactional
     public int checkAndNotifyExpiringMedications(int daysThreshold) {
-        log.info("Checking for medications expiring within {} days", daysThreshold);
+        log.info("🔍 Checking for medications expiring within {} days", daysThreshold);
 
         LocalDate today = LocalDate.now();
         LocalDate thresholdDate = today.plusDays(daysThreshold);
 
-        List<Medication> expiringMedications =
-                medicationRepository.findExpiringBetween(today, thresholdDate);
+        List<Medication> expiringMedications = medicationRepository.findExpiringBetween(today, thresholdDate);
+        log.info("📊 Found {} expiring medications", expiringMedications.size());
 
         int notificationCount = 0;
 
         for (Medication medication : expiringMedications) {
             try {
-                // Hasta bilgisini getir
-                Patient patient = patientRepository.findById(medication.getPatientId())
-                        .orElse(null);
+                Patient patient = patientRepository.findById(medication.getPatientId()).orElse(null);
 
                 if (patient == null) {
-                    log.warn("Patient not found for medication: {}", medication.getId());
+                    log.warn("⚠️ Patient not found for medication: {}", medication.getId());
                     continue;
                 }
 
-                // Email almayı kabul etmişse ve email varsa
+                log.info("👤 Processing medication for patient: {} ({})",
+                        patient.getFullName(), patient.getContactInfo().getEmail());
+
                 if (!patient.canReceiveEmail()) {
-                    log.info("Patient {} cannot receive email, skipping", patient.getId());
+                    log.warn("⚠️ Patient {} cannot receive email (email: {})",
+                            patient.getId(), patient.getContactInfo().getEmail());
                     continue;
                 }
 
-                // Bu ilaç için daha önce bildirim gönderilmiş mi kontrol et
-                List<Notification> existingNotifications = notificationRepository
-                        .findByRelatedEntityIdAndType(
-                                medication.getId(),
-                                "MEDICATION"
-                        );
+                // ✅ Bildirim oluştur
+                Notification notification = createMedicationExpiryNotification(medication, patient);
+                notification = notificationRepository.save(notification); // ✅ SAVE EDİYORUZ
+                log.info("✅ Notification created with ID: {}", notification.getId());
 
-                // Son 7 gün içinde gönderilmiş bildirim varsa tekrar gönderme
-                boolean recentNotificationExists = existingNotifications.stream()
-                        .anyMatch(n -> n.getCreatedAt().isAfter(
-                                java.time.LocalDateTime.now().minusDays(7)
-                        ));
+                // ✅ Email gönder VE notification'ı güncelle
+                boolean emailSent = sendMedicationExpiryEmail(notification, medication, patient);
 
-                if (recentNotificationExists) {
-                    log.info("Recent notification exists for medication: {}", medication.getId());
-                    continue;
+                if (emailSent) {
+                    notification.markAsSent();
+                    notificationRepository.save(notification); // ✅ DURUMU GÜNCELLEYEREK KAYDET
+                    notificationCount++;
+                    log.info("✅ Email sent successfully to: {}", patient.getContactInfo().getEmail());
+                } else {
+                    notification.markAsFailed("Email gönderilemedi");
+                    notificationRepository.save(notification); // ✅ HATA DURUMUNU KAYDET
+                    log.error("❌ Failed to send email to: {}", patient.getContactInfo().getEmail());
                 }
-
-                // Bildirim oluştur
-                Notification notification = createMedicationExpiryNotification(
-                        medication,
-                        patient
-                );
-
-                notificationRepository.save(notification);
-
-                // Email gönder
-                sendMedicationExpiryEmail(notification, medication, patient);
-
-                notificationCount++;
-                log.info("Notification created and sent for medication: {}", medication.getId());
 
             } catch (Exception e) {
-                log.error("Failed to create notification for medication: {}",
-                        medication.getId(), e);
+                log.error("❌ Failed to process medication notification: {}", medication.getId(), e);
             }
         }
 
-        log.info("Created {} medication expiry notifications", notificationCount);
+        log.info("🎯 Created {} medication expiry notifications", notificationCount);
         return notificationCount;
     }
 
-    /**
-     * Checks all prescriptions and creates notifications for expiring ones
-     * Returns count of notifications created
-     */
     @Transactional
     public int checkAndNotifyExpiringPrescriptions(int daysThreshold) {
-        log.info("Checking for prescriptions expiring within {} days", daysThreshold);
+        log.info("🔍 Checking for prescriptions expiring within {} days", daysThreshold);
 
-        List<Prescription> expiringPrescriptions =
-                prescriptionRepository.findExpiringSoon(daysThreshold);
+        List<Prescription> expiringPrescriptions = prescriptionRepository.findExpiringSoon(daysThreshold);
+        log.info("📊 Found {} expiring prescriptions", expiringPrescriptions.size());
 
         int notificationCount = 0;
 
         for (Prescription prescription : expiringPrescriptions) {
             try {
-                // Hasta bilgisini getir
-                Patient patient = patientRepository.findById(prescription.getPatientId())
-                        .orElse(null);
+                Patient patient = patientRepository.findById(prescription.getPatientId()).orElse(null);
 
                 if (patient == null) {
-                    log.warn("Patient not found for prescription: {}", prescription.getId());
+                    log.warn("⚠️ Patient not found for prescription: {}", prescription.getId());
                     continue;
                 }
 
-                // Email almayı kabul etmişse ve email varsa
+                log.info("👤 Processing prescription for patient: {} ({})",
+                        patient.getFullName(), patient.getContactInfo().getEmail());
+
                 if (!patient.canReceiveEmail()) {
-                    log.info("Patient {} cannot receive email, skipping", patient.getId());
+                    log.warn("⚠️ Patient {} cannot receive email", patient.getId());
                     continue;
                 }
 
-                // Bu reçete için daha önce bildirim gönderilmiş mi kontrol et
-                List<Notification> existingNotifications = notificationRepository
-                        .findByRelatedEntityIdAndType(
-                                prescription.getId(),
-                                "PRESCRIPTION"
-                        );
+                // ✅ Bildirim oluştur
+                Notification notification = createPrescriptionExpiryNotification(prescription, patient);
+                notification = notificationRepository.save(notification);
+                log.info("✅ Notification created with ID: {}", notification.getId());
 
-                // Son 7 gün içinde gönderilmiş bildirim varsa tekrar gönderme
-                boolean recentNotificationExists = existingNotifications.stream()
-                        .anyMatch(n -> n.getCreatedAt().isAfter(
-                                java.time.LocalDateTime.now().minusDays(7)
-                        ));
+                // ✅ Email gönder VE notification'ı güncelle
+                boolean emailSent = sendPrescriptionExpiryEmail(notification, prescription, patient);
 
-                if (recentNotificationExists) {
-                    log.info("Recent notification exists for prescription: {}",
-                            prescription.getId());
-                    continue;
+                if (emailSent) {
+                    notification.markAsSent();
+                    notificationRepository.save(notification);
+                    notificationCount++;
+                    log.info("✅ Email sent successfully to: {}", patient.getContactInfo().getEmail());
+                } else {
+                    notification.markAsFailed("Email gönderilemedi");
+                    notificationRepository.save(notification);
+                    log.error("❌ Failed to send email to: {}", patient.getContactInfo().getEmail());
                 }
-
-                // Bildirim oluştur
-                Notification notification = createPrescriptionExpiryNotification(
-                        prescription,
-                        patient
-                );
-
-                notificationRepository.save(notification);
-
-                // Email gönder
-                sendPrescriptionExpiryEmail(notification, prescription, patient);
-
-                notificationCount++;
-                log.info("Notification created and sent for prescription: {}",
-                        prescription.getId());
 
             } catch (Exception e) {
-                log.error("Failed to create notification for prescription: {}",
-                        prescription.getId(), e);
+                log.error("❌ Failed to process prescription notification: {}", prescription.getId(), e);
             }
         }
 
-        log.info("Created {} prescription expiry notifications", notificationCount);
+        log.info("🎯 Created {} prescription expiry notifications", notificationCount);
         return notificationCount;
     }
 
-    /**
-     * Checks and creates all types of notifications
-     */
     @Transactional
     public NotificationCheckResult checkAndCreateAllNotifications() {
-        log.info("Starting comprehensive notification check...");
+        log.info("🚀 Starting comprehensive notification check...");
 
         NotificationCheckResult result = new NotificationCheckResult();
-
-        // İlaç bildirimleri (7 gün önceden)
         result.medicationNotifications = checkAndNotifyExpiringMedications(7);
-
-        // Reçete bildirimleri (7 gün önceden)
         result.prescriptionNotifications = checkAndNotifyExpiringPrescriptions(7);
-
-        // Stok bildirimleri (90 gün önceden - SKT için)
         result.stockNotifications = checkAndNotifyExpiringStocks(90);
 
-        log.info("Notification check completed. Results: {}", result);
+        log.info("🏁 Notification check completed. Results: {}", result);
         return result;
     }
 
-    /**
-     * Checks stocks and creates notifications for near-expiry items
-     */
     @Transactional
     public int checkAndNotifyExpiringStocks(int daysThreshold) {
-        log.info("Checking for stocks expiring within {} days", daysThreshold);
+        log.info("🔍 Checking for stocks expiring within {} days", daysThreshold);
 
         List<Stock> expiringStocks = stockRepository.findExpiringSoon(daysThreshold);
         int notificationCount = 0;
 
         for (Stock stock : expiringStocks) {
             try {
-                // Bu stok için daha önce bildirim gönderilmiş mi kontrol et
                 List<Notification> existingNotifications = notificationRepository
                         .findByRelatedEntityIdAndType(stock.getId(), "STOCK");
 
                 boolean recentNotificationExists = existingNotifications.stream()
                         .anyMatch(n -> n.getCreatedAt().isAfter(
-                                java.time.LocalDateTime.now().minusDays(30)
-                        ));
+                                java.time.LocalDateTime.now().minusDays(30)));
 
                 if (recentNotificationExists) {
                     continue;
                 }
 
-                // Sistem bildirimi oluştur (eczane yöneticisi için)
                 notificationUseCase.createStockExpiryNotification(stock.getId());
                 notificationCount++;
 
             } catch (Exception e) {
-                log.error("Failed to create notification for stock: {}", stock.getId(), e);
+                log.error("❌ Failed to create notification for stock: {}", stock.getId(), e);
             }
         }
 
-        log.info("Created {} stock expiry notifications", notificationCount);
+        log.info("🎯 Created {} stock expiry notifications", notificationCount);
         return notificationCount;
     }
 
     // ==================== PRIVATE HELPER METHODS ====================
 
-    private Notification createMedicationExpiryNotification(Medication medication,
-                                                            Patient patient) {
+    private Notification createMedicationExpiryNotification(Medication medication, Patient patient) {
         Product product = productRepository.findById(medication.getProductId()).orElse(null);
         String medicationName = product != null ? product.getName() : medication.getMedicationName();
 
@@ -277,8 +220,7 @@ public class NotificationTriggerService {
         return notification;
     }
 
-    private Notification createPrescriptionExpiryNotification(Prescription prescription,
-                                                              Patient patient) {
+    private Notification createPrescriptionExpiryNotification(Prescription prescription, Patient patient) {
         Notification notification = new Notification();
         notification.setPatientId(patient.getId());
         notification.setType(NotificationType.PRESCRIPTION_EXPIRY);
@@ -303,14 +245,19 @@ public class NotificationTriggerService {
         return notification;
     }
 
-    private void sendMedicationExpiryEmail(Notification notification,
-                                           Medication medication,
-                                           Patient patient) {
+    // ✅ BOOL DÖNDÜRÜYOR - BAŞARILI MI DEĞİL Mİ
+    private boolean sendMedicationExpiryEmail(Notification notification, Medication medication, Patient patient) {
         try {
+            log.info("📧 Attempting to send medication expiry email...");
+            log.info("   📨 To: {}", patient.getContactInfo().getEmail());
+            log.info("   👤 Patient: {}", patient.getFullName());
+
             Product product = productRepository.findById(medication.getProductId()).orElse(null);
             String medicationName = product != null ? product.getName() : medication.getMedicationName();
             String dosage = medication.getDosage() != null ?
                     medication.getDosage().getFormattedDosage() : "Belirtilmemiş";
+
+            log.info("   💊 Medication: {} ({})", medicationName, dosage);
 
             emailService.sendMedicationReminderEmail(
                     patient.getContactInfo().getEmail(),
@@ -319,19 +266,23 @@ public class NotificationTriggerService {
                     dosage
             );
 
-            notification.markAsSent();
-            log.info("Medication expiry email sent to: {}", patient.getContactInfo().getEmail());
+            log.info("✅ Medication expiry email sent successfully!");
+            return true;
 
         } catch (Exception e) {
-            log.error("Failed to send medication expiry email", e);
-            notification.markAsFailed(e.getMessage());
+            log.error("❌ Failed to send medication expiry email", e);
+            log.error("   📧 Email: {}", patient.getContactInfo().getEmail());
+            log.error("   🔴 Error: {}", e.getMessage());
+            return false;
         }
     }
 
-    private void sendPrescriptionExpiryEmail(Notification notification,
-                                             Prescription prescription,
-                                             Patient patient) {
+    // ✅ BOOL DÖNDÜRÜYOR
+    private boolean sendPrescriptionExpiryEmail(Notification notification, Prescription prescription, Patient patient) {
         try {
+            log.info("📧 Attempting to send prescription expiry email...");
+            log.info("   📨 To: {}", patient.getContactInfo().getEmail());
+
             emailService.sendPrescriptionExpiryEmail(
                     patient.getContactInfo().getEmail(),
                     patient.getFullName(),
@@ -339,16 +290,17 @@ public class NotificationTriggerService {
                     (int) prescription.getRemainingDays()
             );
 
-            notification.markAsSent();
-            log.info("Prescription expiry email sent to: {}", patient.getContactInfo().getEmail());
+            log.info("✅ Prescription expiry email sent successfully!");
+            return true;
 
         } catch (Exception e) {
-            log.error("Failed to send prescription expiry email", e);
-            notification.markAsFailed(e.getMessage());
+            log.error("❌ Failed to send prescription expiry email", e);
+            log.error("   📧 Email: {}", patient.getContactInfo().getEmail());
+            log.error("   🔴 Error: {}", e.getMessage());
+            return false;
         }
     }
 
-    // Inner class for result
     public static class NotificationCheckResult {
         public int medicationNotifications = 0;
         public int prescriptionNotifications = 0;
