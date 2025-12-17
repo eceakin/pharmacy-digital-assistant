@@ -3,11 +3,11 @@ package com.pharmacy.assistant.domain.enums;
 public enum NotificationType {
     MEDICATION_REMINDER("İlaç Hatırlatma"),
     MEDICATION_REFILL("İlaç Yenileme"),
+    MEDICATION_EXPIRY("İlaç Reçete Süresi Dolacak"),
     PRESCRIPTION_EXPIRY("Reçete Süresi Dolacak"),
     PRESCRIPTION_RENEWAL("Reçete Yenileme"),
-    APPOINTMENT_REMINDER("Randevu Hatırlatma"),
-    STOCK_ALERT("Stok Uyarısı"),
-    PROMOTIONAL("Promosyon"),
+    STOCK_LOW("Düşük Stok Uyarısı"),
+    STOCK_EXPIRY("Stok SKT Uyarısı"),
     GENERAL("Genel Bilgilendirme");
 
     private final String displayName;
@@ -20,26 +20,19 @@ public enum NotificationType {
         return displayName;
     }
 
-    /**
-     * Checks if this notification type requires patient consent
-     */
-    public boolean requiresConsent() {
-        return this == PROMOTIONAL;
-    }
-
-    /**
-     * Checks if this is a medication-related notification
-     */
     public boolean isMedicationRelated() {
         return this == MEDICATION_REMINDER ||
-                this == MEDICATION_REFILL;
+                this == MEDICATION_REFILL ||
+                this == MEDICATION_EXPIRY;
     }
 
-    /**
-     * Checks if this is a prescription-related notification
-     */
     public boolean isPrescriptionRelated() {
         return this == PRESCRIPTION_EXPIRY ||
                 this == PRESCRIPTION_RENEWAL;
+    }
+
+    public boolean isStockRelated() {
+        return this == STOCK_LOW ||
+                this == STOCK_EXPIRY;
     }
 }

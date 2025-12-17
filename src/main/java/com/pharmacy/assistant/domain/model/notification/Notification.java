@@ -4,7 +4,6 @@ import com.pharmacy.assistant.domain.enums.NotificationStatus;
 import com.pharmacy.assistant.domain.enums.NotificationType;
 import com.pharmacy.assistant.domain.enums.NotificationChannel;
 import com.pharmacy.assistant.domain.model.common.BaseEntity;
-import com.pharmacy.assistant.domain.valueobject.NotificationRecipient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -19,33 +18,40 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class Notification extends BaseEntity {
 
-    private UUID patientId;                    // İlişkili hasta ID'si
-    private NotificationType type;             // Bildirim türü (İlaç Hatırlatma, Reçete Yenileme, vb.)
-    private NotificationChannel channel;       // Bildirim kanalı (SMS, Email)
+    private UUID patientId;                    // İlişkili hasta ID'si (null olabilir - sistem bildirimleri için)
+    private NotificationType type;             // Bildirim türü
+    private NotificationChannel channel;       // Bildirim kanalı
     private NotificationStatus status;         // Bildirim durumu
-    private NotificationRecipient recipient;   // Alıcı bilgileri (Value Object)
 
-    private String subject;                    // Konu (Email için)
+    private String title;                      // Başlık
     private String message;                    // Mesaj içeriği
-    private String templateName;               // Şablon adı (opsiyonel)
+    private String recipient;                  // Alıcı bilgisi (telefon/email)
 
-    private LocalDateTime scheduledAt;         // Planlanmış gönderim zamanı
+    private LocalDateTime scheduledFor;        // Planlanmış gönderim zamanı
     private LocalDateTime sentAt;              // Gönderildiği zaman
-    private LocalDateTime deliveredAt;         // İletildiği zaman
-    private LocalDateTime readAt;              // Okunduğu zaman (tracking için)
+    private LocalDateTime readAt;              // Okunduğu zaman
 
-    private String externalId;                 // Harici servis ID'si (SMS provider vb.)
+    private UUID relatedEntityId;              // İlişkili entity ID'si
+    private String relatedEntityType;          // İlişkili entity tipi
+
+    private Integer priority;                  // Öncelik (1-5)
     private Integer retryCount;                // Tekrar deneme sayısı
-    private Integer maxRetries;                // Maksimum tekrar deneme sayısı
+    private Integer maxRetries;                // Maksimum tekrar deneme sayısı (default: 3)
 
-    private String errorMessage;               // Hata mesajı (başarısız durumda)
-    private String metadata;                   // Ek bilgiler (JSON string)
+    private String errorMessage;               // Hata mesajı
 
     /**
      * Checks if notification is pending
      */
     public boolean isPending() {
         return NotificationStatus.PENDING.equals(status);
+    }
+
+    /**
+     * Checks if notification is scheduled
+     */
+    public boolean isScheduled() {
+        return NotificationStatus.SCHEDULED.equals(status);
     }
 
     /**
@@ -63,6 +69,13 @@ public class Notification extends BaseEntity {
     }
 
     /**
+     * Checks if notification was read
+     */
+    public boolean isRead() {
+        return NotificationStatus.READ.equals(status);
+    }
+
+    /**
      * Checks if notification failed
      */
     public boolean isFailed() {
@@ -70,58 +83,56 @@ public class Notification extends BaseEntity {
     }
 
     /**
+     * Checks if notification can be sent
+     */
+    public boolean canBeSent() {
+        return (isPending() || isScheduled()) && !isFailed();
+    }
+
+    /**
      * Checks if notification can be retried
      */
-    public boolean canRetry() {
+    public boolean canBeRetried() {
+        if (maxRetries == null) {
+            maxRetries = 3; // Default max retries
+        }
         return isFailed() &&
                 retryCount != null &&
-                maxRetries != null &&
                 retryCount < maxRetries;
     }
 
     /**
-     * Checks if notification is scheduled for future
+     * Checks if notification is due for sending
      */
-    public boolean isScheduled() {
-        return scheduledAt != null &&
-                LocalDateTime.now().isBefore(scheduledAt);
-    }
-
-    /**
-     * Checks if notification is ready to send
-     */
-    public boolean isReadyToSend() {
-        return isPending() &&
-                (scheduledAt == null || !LocalDateTime.now().isBefore(scheduledAt));
+    public boolean isDueForSending() {
+        if (scheduledFor == null) {
+            return isPending();
+        }
+        return (isPending() || isScheduled()) &&
+                LocalDateTime.now().isAfter(scheduledFor);
     }
 
     /**
      * Marks notification as sent
      */
-    public void markAsSent(String externalId) {
+    public void markAsSent() {
         this.status = NotificationStatus.SENT;
         this.sentAt = LocalDateTime.now();
-        this.externalId = externalId;
     }
 
     /**
      * Marks notification as delivered
      */
     public void markAsDelivered() {
-        if (isSent()) {
-            this.status = NotificationStatus.DELIVERED;
-            this.deliveredAt = LocalDateTime.now();
-        }
+        this.status = NotificationStatus.DELIVERED;
     }
 
     /**
      * Marks notification as read
      */
     public void markAsRead() {
-        if (isDelivered()) {
-            this.status = NotificationStatus.READ;
-            this.readAt = LocalDateTime.now();
-        }
+        this.status = NotificationStatus.READ;
+        this.readAt = LocalDateTime.now();
     }
 
     /**
@@ -133,77 +144,30 @@ public class Notification extends BaseEntity {
     }
 
     /**
-     * Increments retry count
+     * Retry failed notification
      */
-    public void incrementRetryCount() {
-        if (retryCount == null) {
-            retryCount = 0;
-        }
-        retryCount++;
-    }
-
-    /**
-     * Resets for retry
-     */
-    public void resetForRetry() {
-        if (canRetry()) {
+    public void retry() {
+        if (canBeRetried()) {
             this.status = NotificationStatus.PENDING;
             this.errorMessage = null;
-            incrementRetryCount();
+            this.retryCount++;
         }
     }
 
     /**
-     * Cancels the notification
+     * Cancel notification
      */
     public void cancel() {
-        if (isPending()) {
-            this.status = NotificationStatus.CANCELLED;
-        }
+        this.status = NotificationStatus.CANCELLED;
     }
 
     /**
-     * Validates notification has required fields
+     * Validates notification
      */
     public boolean isValid() {
-        return patientId != null &&
-                type != null &&
+        return type != null &&
                 channel != null &&
-                recipient != null &&
-                recipient.isValid() &&
                 message != null &&
                 !message.isEmpty();
-    }
-
-    /**
-     * Gets time until scheduled send
-     */
-    public Long getMinutesUntilScheduled() {
-        if (scheduledAt == null) {
-            return 0L;
-        }
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isAfter(scheduledAt)) {
-            return 0L;
-        }
-        return java.time.Duration.between(now, scheduledAt).toMinutes();
-    }
-
-    /**
-     * Gets time since sent
-     */
-    public Long getMinutesSinceSent() {
-        if (sentAt == null) {
-            return null;
-        }
-        return java.time.Duration.between(sentAt, LocalDateTime.now()).toMinutes();
-    }
-
-    /**
-     * Checks if notification requires consent
-     */
-    public boolean requiresConsent() {
-        return NotificationChannel.SMS.equals(channel) ||
-                NotificationChannel.EMAIL.equals(channel);
     }
 }

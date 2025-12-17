@@ -5,9 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Value Object for Notification Recipient
  */
@@ -131,14 +128,4 @@ public class NotificationRecipient {
 }
 
 // ---
-
-// NotificationTemplate.java
-package com.pharmacy.assistant.domain.valueobject;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.HashMap;
-import java.util.Map;
 
