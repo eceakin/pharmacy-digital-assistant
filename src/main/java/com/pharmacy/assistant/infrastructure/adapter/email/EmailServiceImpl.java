@@ -158,7 +158,8 @@ public class EmailServiceImpl implements EmailService {
                 <style>
                     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    /* AŞAĞIDAKİ SATIRDA 0%% ve 100%% YAPILDI */
+                    .header { background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); 
                              color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
                     .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
                     .medication-box { background: white; padding: 20px; margin: 20px 0; 
@@ -169,7 +170,7 @@ public class EmailServiceImpl implements EmailService {
                 </style>
             </head>
             <body>
-                <div class="container">
+                 <div class="container">
                     <div class="header">
                         <h1>🔔 İlaç Hatırlatması</h1>
                     </div>
@@ -215,7 +216,8 @@ public class EmailServiceImpl implements EmailService {
                 <style>
                     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                    /* AŞAĞIDAKİ SATIRDA 0%% ve 100%% YAPILDI */
+                    .header { background: linear-gradient(135deg, #f093fb 0%%, #f5576c 100%%); 
                              color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
                     .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
                     .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; 

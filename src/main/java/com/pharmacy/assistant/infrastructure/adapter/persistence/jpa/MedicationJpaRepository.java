@@ -15,22 +15,36 @@ import java.util.UUID;
 public interface MedicationJpaRepository extends JpaRepository<MedicationEntity, UUID> {
 
     List<MedicationEntity> findByPatientId(UUID patientId);
-
     List<MedicationEntity> findByProductId(UUID productId);
-
     List<MedicationEntity> findByStatus(MedicationStatus status);
-
-    // "Active" ilaçları getirmek için (Genellikle Status kontrolü yeterlidir)
     List<MedicationEntity> findByPatientIdAndStatus(UUID patientId, MedicationStatus status);
 
-    // Belirli bir tarih aralığında süresi dolacak ilaçlar (scheduleEndDate'e göre)
-    List<MedicationEntity> findByScheduleEndDateBetween(LocalDate startDate, LocalDate endDate);
+    // ❌ ESKİ - SİLİN VEYA YORUM SATIRI YAPIN
+    // List<MedicationEntity> findByScheduleEndDateBetween(LocalDate startDate, LocalDate endDate);
+// Sadece AKTİF olan ve süresi yaklaşanları getir
+    List<MedicationEntity> findByStatusAndScheduleEndDateBetween(MedicationStatus status, LocalDate startDate, LocalDate endDate);
+    // ✅ YENİ - DAHA DOĞRU SORGU
+    @Query("SELECT m FROM MedicationEntity m WHERE " +
+            "m.status = 'ACTIVE' AND " +
+            "m.scheduleEndDate IS NOT NULL AND " +
+            "m.scheduleEndDate >= :today AND " +
+            "m.scheduleEndDate <= :thresholdDate")
+    List<MedicationEntity> findExpiringBetween(
+            @Param("today") LocalDate today,
+            @Param("thresholdDate") LocalDate thresholdDate
+    );
 
-    // Refill (Yenileme) gerekenler: Aktif olan VE bitiş tarihine belirtilen günden az kalmış (ama geçmemiş) ilaçlar
-    @Query("SELECT m FROM MedicationEntity m WHERE m.status = 'ACTIVE' AND m.scheduleEndDate BETWEEN :today AND :thresholdDate")
-    List<MedicationEntity> findNeedingRefill(@Param("today") LocalDate today, @Param("thresholdDate") LocalDate thresholdDate);
+    // ✅ YENİ - Refill gerekenler (7 gün içinde)
+    @Query("SELECT m FROM MedicationEntity m WHERE " +
+            "m.status = 'ACTIVE' AND " +
+            "m.scheduleEndDate IS NOT NULL AND " +
+            "m.scheduleEndDate >= :today AND " +
+            "m.scheduleEndDate <= :thresholdDate")
+    List<MedicationEntity> findNeedingRefill(
+            @Param("today") LocalDate today,
+            @Param("thresholdDate") LocalDate thresholdDate
+    );
 
     long countByPatientId(UUID patientId);
-
     long countByStatus(MedicationStatus status);
 }

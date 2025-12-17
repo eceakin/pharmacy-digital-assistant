@@ -73,11 +73,12 @@ public class MedicationRepositoryAdapter implements MedicationRepository {
 
     @Override
     public List<Medication> findExpiringBetween(LocalDate startDate, LocalDate endDate) {
-        return jpaRepository.findByScheduleEndDateBetween(startDate, endDate).stream()
+        // Status parametresini ekleyerek çağırın
+        return jpaRepository.findByStatusAndScheduleEndDateBetween(MedicationStatus.ACTIVE, startDate, endDate)
+                .stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
-
     @Override
     public List<Medication> findNeedingRefill() {
         // Domain kuralı: 7 gün veya daha az kalanlar.
