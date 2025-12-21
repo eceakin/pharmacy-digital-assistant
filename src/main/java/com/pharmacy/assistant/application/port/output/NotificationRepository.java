@@ -23,7 +23,7 @@ public interface NotificationRepository {
     void deleteById(UUID id);
     boolean existsById(UUID id);
     long count();
-
+    void deleteAll(List<Notification> notifications);
     // Query by Patient
     List<Notification> findByPatientId(UUID patientId);
     List<Notification> findUnreadByPatientId(UUID patientId);

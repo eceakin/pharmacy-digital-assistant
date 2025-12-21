@@ -57,6 +57,17 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
+    public void deleteAll(List<Notification> notifications) {
+        List<UUID> ids = notifications.stream()
+                .map(Notification::getId)
+                .collect(Collectors.toList());
+
+        if (!ids.isEmpty()) {
+            jpaRepository.deleteAllById(ids);
+        }
+    }
+
+    @Override
     public List<Notification> findByPatientId(UUID patientId) {
         return jpaRepository.findByPatientId(patientId).stream()
                 .map(this::toDomain)

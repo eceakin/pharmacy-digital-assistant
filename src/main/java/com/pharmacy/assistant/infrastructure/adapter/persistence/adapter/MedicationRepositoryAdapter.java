@@ -96,6 +96,20 @@ public class MedicationRepositoryAdapter implements MedicationRepository {
     }
 
     @Override
+    public void deleteAll(List<Medication> medications) {
+        // Domain nesnelerini doğrudan JPA'ya veremeyiz (Incompatible types hatası buradaydı).
+        // Bu yüzden önce ID'leri topluyoruz:
+        List<UUID> ids = medications.stream()
+                .map(Medication::getId)
+                .collect(Collectors.toList());
+
+        // Sonra ID listesini kullanarak siliyoruz:
+        if (!ids.isEmpty()) {
+            jpaRepository.deleteAllById(ids);
+        }
+    }
+
+    @Override
     public boolean existsById(UUID id) {
         return jpaRepository.existsById(id);
     }

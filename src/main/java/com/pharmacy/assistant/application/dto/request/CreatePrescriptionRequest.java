@@ -5,6 +5,7 @@ import com.pharmacy.assistant.domain.enums.PrescriptionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -52,8 +53,7 @@ public class CreatePrescriptionRequest {
 
     private String notes;
 
-    @Positive(message = "Tekrar kullanım sayısı pozitif olmalıdır")
-    private Integer refillCount;
+    @PositiveOrZero(message = "Tekrar kullanım sayısı 0 veya daha büyük olmalıdır")    private Integer refillCount;
 }
 
 

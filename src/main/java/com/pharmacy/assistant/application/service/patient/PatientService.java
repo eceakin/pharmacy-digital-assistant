@@ -5,9 +5,13 @@ import com.pharmacy.assistant.application.dto.request.UpdatePatientRequest;
 import com.pharmacy.assistant.application.dto.response.PatientResponse;
 import com.pharmacy.assistant.application.mapper.PatientMapper;
 import com.pharmacy.assistant.application.port.input.ManagePatientUseCase;
+import com.pharmacy.assistant.application.port.output.MedicationRepository;
+import com.pharmacy.assistant.application.port.output.NotificationRepository;
 import com.pharmacy.assistant.application.port.output.PatientRepository;
 import com.pharmacy.assistant.domain.enums.PatientStatus;
 import com.pharmacy.assistant.domain.exception.PatientNotFoundException;
+import com.pharmacy.assistant.domain.model.notification.Notification;
+import com.pharmacy.assistant.domain.model.patient.Medication;
 import com.pharmacy.assistant.domain.model.patient.Patient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +30,8 @@ public class PatientService implements ManagePatientUseCase {
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
-
+    private final NotificationRepository notificationRepository; // YENİ EKLENECEK
+    private final MedicationRepository medicationRepository; // Bunu inject edin
     @Override
     public PatientResponse createPatient(CreatePatientRequest request) {
         log.info("Creating new patient: {} {}", request.getFirstName(), request.getLastName());
@@ -105,9 +110,24 @@ public class PatientService implements ManagePatientUseCase {
             throw new PatientNotFoundException("Hasta bulunamadı: " + id);
         }
 
+        // 1. İlaçları Sil (Bunu zaten yapmıştık)
+        List<Medication> medications = medicationRepository.findByPatientId(id);
+        if (!medications.isEmpty()) {
+            medicationRepository.deleteAll(medications);
+        }
+
+        // 2. YENİ: Bildirimleri Sil (Bunu ekliyoruz)
+        List<Notification> notifications = notificationRepository.findByPatientId(id);
+        if (!notifications.isEmpty()) {
+            notificationRepository.deleteAll(notifications);
+        }
+
+        // 3. Hastayı Sil
         patientRepository.deleteById(id);
-        log.info("Patient deleted successfully: {}", id);
+        log.info("Patient and associated data (medications, notifications) deleted successfully: {}", id);
     }
+
+    // PatientService.java içindeki deletePatient metodunuz:
 
     @Override
     public void activatePatient(UUID id) {

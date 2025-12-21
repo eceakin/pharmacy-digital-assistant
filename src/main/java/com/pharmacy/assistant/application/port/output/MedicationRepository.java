@@ -19,6 +19,7 @@ public interface MedicationRepository {
     List<Medication> findExpiringBetween(LocalDate startDate, LocalDate endDate);
     List<Medication> findNeedingRefill();
     void deleteById(UUID id);
+    void  deleteAll(List<Medication> medications);
     boolean existsById(UUID id);
     long count();
     long countByPatientId(UUID patientId);
