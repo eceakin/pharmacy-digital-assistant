@@ -52,3 +52,5 @@ logging:
       from: laptop.ece1635@gmail.com  # Gönderen email
       from-name: "Eczane Dijital Asistan"
       reply-to: laptop.ece1635@gmail.com
+cors:
+  allowed-origins: "http://localhost:3000" # React uygulamanın adresi

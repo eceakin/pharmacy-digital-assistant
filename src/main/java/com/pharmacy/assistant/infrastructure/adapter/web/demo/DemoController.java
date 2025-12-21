@@ -1,6 +1,7 @@
 package com.pharmacy.assistant.infrastructure.adapter.web.demo;
 
 import com.pharmacy.assistant.application.service.notification.NotificationTriggerService;
+import com.pharmacy.assistant.application.service.settings.SystemSettingsService;
 import com.pharmacy.assistant.infrastructure.adapter.web.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,16 +22,18 @@ import java.util.Map;
 public class DemoController {
 
     private final NotificationTriggerService notificationTriggerService;
+    private final SystemSettingsService settingsService; // ✅ YENİ
 
     /**
      * DEMO: Check and send notifications for expiring medications
      * GET /api/demo/check-medications
      */
     @GetMapping("/check-medications")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> checkExpiringMedications(
-            @RequestParam(defaultValue = "7") int days) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkExpiringMedications() {
 
-        log.info("🎯 DEMO: Checking medications expiring within {} days", days);
+        // ✅ Settings'den gün sayısını al
+        int days = settingsService.getMedicationExpiryWarningDays();
+        log.info("🎯 DEMO: Checking medications expiring within {} days (from settings)", days);
 
         int count = notificationTriggerService.checkAndNotifyExpiringMedications(days);
 
@@ -51,10 +54,11 @@ public class DemoController {
      * GET /api/demo/check-prescriptions
      */
     @GetMapping("/check-prescriptions")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> checkExpiringPrescriptions(
-            @RequestParam(defaultValue = "7") int days) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkExpiringPrescriptions() {
 
-        log.info("🎯 DEMO: Checking prescriptions expiring within {} days", days);
+        // ✅ Settings'den gün sayısını al
+        int days = settingsService.getPrescriptionExpiryWarningDays();
+        log.info("🎯 DEMO: Checking prescriptions expiring within {} days (from settings)", days);
 
         int count = notificationTriggerService.checkAndNotifyExpiringPrescriptions(days);
 
@@ -77,7 +81,7 @@ public class DemoController {
     @GetMapping("/check-all")
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkAllNotifications() {
 
-        log.info("🎯 DEMO: Checking ALL notification types");
+        log.info("🎯 DEMO: Checking ALL notification types (using settings values)");
 
         NotificationTriggerService.NotificationCheckResult result =
                 notificationTriggerService.checkAndCreateAllNotifications();
