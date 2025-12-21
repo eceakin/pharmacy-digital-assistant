@@ -114,27 +114,22 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    // Bu metodun class içinde olduğundan emin ol:
     @Override
-    public void sendPrescriptionExpiryEmail(String to, String patientName,
-                                            String prescriptionNumber, int daysRemaining) {
-        try {
-            log.info("Sending prescription expiry email to: {}", to);
+    public void sendPrescriptionExpiryEmail(String to, String patientName, String prescriptionNumber, int daysRemaining) {
+        String subject = "📋 Reçete Süresi Uyarısı";
+        String content = String.format("""
+            Sayın %s,
+            
+            %s numaralı reçetenizin kullanım süresi %d gün sonra dolacaktır.
+            
+            Tedavinizin aksamaması için lütfen en kısa sürede doktorunuza başvurarak reçetenizi yeniletiniz.
+            
+            Sağlıklı günler dileriz.
+            """, patientName, prescriptionNumber, daysRemaining);
 
-            String subject = "⚠️ Reçete Yenileme Hatırlatması - " + prescriptionNumber;
-
-            String htmlContent = buildPrescriptionExpiryHtml(
-                    patientName, prescriptionNumber, daysRemaining);
-
-            sendHtmlEmail(to, subject, htmlContent);
-
-            log.info("Prescription expiry email sent successfully to: {}", to);
-        } catch (Exception e) {
-            log.error("Failed to send prescription expiry email to: {}", to, e);
-            throw new NotificationSendException(
-                    "Reçete hatırlatma emaili gönderilemedi: " + e.getMessage(), e);
-        }
+        sendHtmlEmail(to, subject, content); // sendEmail senin ana metodun
     }
-
     @Override
     public boolean isValidEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
