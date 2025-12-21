@@ -2,6 +2,7 @@ package com.pharmacy.assistant.infrastructure.adapter.persistence.adapter;
 
 import com.pharmacy.assistant.application.port.output.PrescriptionRepository;
 import com.pharmacy.assistant.domain.enums.PrescriptionStatus;
+import com.pharmacy.assistant.application.mapper.PrescriptionMapper; // Mapper sınıfını import ediyoruz
 import com.pharmacy.assistant.domain.model.prescription.Prescription;
 import com.pharmacy.assistant.domain.valueobject.PrescriptionValidity;
 import com.pharmacy.assistant.infrastructure.adapter.persistence.entity.PrescriptionEntity;
@@ -15,11 +16,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
 @Component
 @RequiredArgsConstructor
 public class PrescriptionRepositoryAdapter implements PrescriptionRepository {
 
     private final PrescriptionJpaRepository jpaRepository;
+    private final PrescriptionMapper prescriptionMapper;
 
     @Override
     public Prescription save(Prescription prescription) {
@@ -77,14 +80,16 @@ public class PrescriptionRepositoryAdapter implements PrescriptionRepository {
         LocalDate today = LocalDate.now();
         LocalDate thresholdDate = today.plusDays(daysThreshold);
 
-        // HATA BURADAYDI: findActiveExpiringBetween yerine,
-        // Enum parametresi alan findExpiringSoon metodunu çağırıyoruz.
-        return jpaRepository.findExpiringSoon(
-                        PrescriptionStatus.ACTIVE, // 'ACTIVE' yazısı yerine Enum veriyoruz
-                        today,
-                        thresholdDate
-                ).stream()
-                .map(this::toDomain)
+        // 'ACTIVE' durumu ve tarih aralığına göre sorgulama
+        List<PrescriptionEntity> entities = jpaRepository.findExpiringSoon(
+                PrescriptionStatus.ACTIVE,
+                today,
+                thresholdDate
+        );
+
+        // Entity listesini Domain model listesine çevirip döndürüyoruz
+        return entities.stream()
+                .map(prescriptionMapper::toDomain)
                 .collect(Collectors.toList());
     }
     @Override

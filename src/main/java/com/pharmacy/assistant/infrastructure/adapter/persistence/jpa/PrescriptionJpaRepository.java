@@ -25,14 +25,12 @@ public interface PrescriptionJpaRepository extends JpaRepository<PrescriptionEnt
     List<PrescriptionEntity> findByEndDateBetween(LocalDate startDate, LocalDate endDate);
 
     // ✅ İyileştirilmiş: Enum parametresi kullanımı
-    @Query("SELECT p FROM PrescriptionEntity p WHERE " +
-            "p.status = :status AND p.endDate BETWEEN :today AND :thresholdDate")
+    @Query("SELECT p FROM PrescriptionEntity p WHERE p.status = :status AND p.endDate BETWEEN :startDate AND :endDate")
     List<PrescriptionEntity> findExpiringSoon(
             @Param("status") PrescriptionStatus status,
-            @Param("today") LocalDate today,
-            @Param("thresholdDate") LocalDate thresholdDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
-
     // ✅ İyileştirilmiş: Hem süresi geçmiş aktifler hem EXPIRED statüsündekiler
     @Query("SELECT p FROM PrescriptionEntity p WHERE " +
             "p.endDate < :today OR p.status = :expiredStatus")

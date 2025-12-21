@@ -1,6 +1,7 @@
 package com.pharmacy.assistant.infrastructure.adapter.email;
 
 import com.pharmacy.assistant.application.port.output.EmailService;
+import com.pharmacy.assistant.application.service.settings.SystemSettingsService;
 import com.pharmacy.assistant.domain.exception.NotificationSendException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private  final SystemSettingsService systemSettingsService;
     private final TemplateEngine templateEngine;
 
     @Value("${pharmacy.email.from:noreply@pharmacy.com}")

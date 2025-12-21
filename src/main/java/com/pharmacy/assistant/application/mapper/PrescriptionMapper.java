@@ -41,7 +41,79 @@ public class PrescriptionMapper {
 
         return prescription;
     }
+    // ✅ EKLENECEK 1. METOD: Entity -> Domain (Okuma işlemi için)
+    public Prescription toDomain(com.pharmacy.assistant.infrastructure.adapter.persistence.entity.PrescriptionEntity entity) {
+        if (entity == null) {
+            return null;
+        }
 
+        Prescription prescription = new Prescription();
+        prescription.setId(entity.getId());
+        prescription.setPatientId(entity.getPatientId());
+        prescription.setPrescriptionNumber(entity.getPrescriptionNumber());
+        prescription.setType(entity.getType());
+        prescription.setStatus(entity.getStatus());
+
+        // Validity (Value Object) oluşturma
+        PrescriptionValidity validity = new PrescriptionValidity(
+                entity.getIssueDate(),
+                entity.getStartDate(),
+                entity.getEndDate(),
+                entity.getValidityDays()
+        );
+        prescription.setValidity(validity);
+
+        // Doktor bilgileri
+        prescription.setDoctorName(entity.getDoctorName());
+        prescription.setDoctorSpecialty(entity.getDoctorSpecialty());
+        prescription.setInstitution(entity.getInstitution());
+
+        // Diğer alanlar
+        prescription.setDiagnosis(entity.getDiagnosis());
+        prescription.setNotes(entity.getNotes());
+        prescription.setRefillCount(entity.getRefillCount());
+        prescription.setRefillsRemaining(entity.getRefillsRemaining());
+
+        // Base entity alanları
+        prescription.setCreatedAt(entity.getCreatedAt());
+        prescription.setUpdatedAt(entity.getUpdatedAt());
+
+        return prescription;
+    }
+
+    // ✅ EKLENECEK 2. METOD: Domain -> Entity (Kaydetme işlemi için)
+    public com.pharmacy.assistant.infrastructure.adapter.persistence.entity.PrescriptionEntity toEntity(Prescription domain) {
+        if (domain == null) {
+            return null;
+        }
+
+        com.pharmacy.assistant.infrastructure.adapter.persistence.entity.PrescriptionEntity entity =
+                new com.pharmacy.assistant.infrastructure.adapter.persistence.entity.PrescriptionEntity();
+
+        entity.setId(domain.getId());
+        entity.setPatientId(domain.getPatientId());
+        entity.setPrescriptionNumber(domain.getPrescriptionNumber());
+        entity.setType(domain.getType());
+        entity.setStatus(domain.getStatus());
+
+        // Validity alanlarını Entity'ye düzleştirerek aktarıyoruz
+        if (domain.getValidity() != null) {
+            entity.setIssueDate(domain.getValidity().getIssueDate());
+            entity.setStartDate(domain.getValidity().getStartDate());
+            entity.setEndDate(domain.getValidity().getEndDate());
+            entity.setValidityDays(domain.getValidity().getValidityDays());
+        }
+
+        entity.setDoctorName(domain.getDoctorName());
+        entity.setDoctorSpecialty(domain.getDoctorSpecialty());
+        entity.setInstitution(domain.getInstitution());
+        entity.setDiagnosis(domain.getDiagnosis());
+        entity.setNotes(domain.getNotes());
+        entity.setRefillCount(domain.getRefillCount());
+        entity.setRefillsRemaining(domain.getRefillsRemaining());
+
+        return entity;
+    }
     public void updateDomainFromRequest(Prescription prescription, UpdatePrescriptionRequest request) {
         prescription.setType(request.getType());
 
