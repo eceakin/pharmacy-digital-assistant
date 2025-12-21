@@ -68,7 +68,7 @@ public class ScheduledNotificationJob {
             log.info("📊 RESULTS:");
             log.info("   💊 Medication Notifications: {}", result.medicationNotifications);
             log.info("   📋 Prescription Notifications: {}", result.prescriptionNotifications);
-            log.info("   📦 Stock Notifications: {}", result.stockNotifications);
+           // log.info("   📦 Stock Notifications: {}", result.stockNotifications);
             log.info("   🎯 TOTAL: {}", result.getTotalNotifications());
 
             if (result.getTotalNotifications() > 0) {

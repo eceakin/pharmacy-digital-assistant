@@ -20,6 +20,11 @@ public class StockSummaryResponse {
     private String batchNumber;
     private LocalDate expiryDate;
     private Integer quantity;
+
+    // --- BU SATIRI EKLE ---
+    private Integer minimumStockLevel;
+    // ----------------------
+
     private StockStatus status;
     private Long daysUntilExpiry;
     private Boolean isNearExpiry;

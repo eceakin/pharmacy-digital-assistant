@@ -47,7 +47,11 @@ public interface PrescriptionJpaRepository extends JpaRepository<PrescriptionEnt
     List<PrescriptionEntity> findWithRefillsRemaining(
             @Param("status") PrescriptionStatus status
     );
-
+    @Query("SELECT p FROM PrescriptionEntity p WHERE p.status = 'ACTIVE' AND p.endDate BETWEEN :startDate AND :endDate")
+    List<PrescriptionEntity> findActiveExpiringBetween(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
     boolean existsByPrescriptionNumber(String prescriptionNumber);
 
     long countByPatientId(UUID patientId);

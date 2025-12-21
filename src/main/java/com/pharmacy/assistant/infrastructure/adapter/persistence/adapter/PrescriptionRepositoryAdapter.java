@@ -76,11 +76,10 @@ public class PrescriptionRepositoryAdapter implements PrescriptionRepository {
     public List<Prescription> findExpiringSoon(int daysThreshold) {
         LocalDate today = LocalDate.now();
         LocalDate thresholdDate = today.plusDays(daysThreshold);
-        return jpaRepository.findExpiringSoon(
-                        PrescriptionStatus.ACTIVE, // ✅ Enum gönderiyoruz
-                        today,
-                        thresholdDate
-                ).stream()
+
+        // JPA'daki sorguyu çağırıyoruz
+        return jpaRepository.findActiveExpiringBetween(today, thresholdDate)
+                .stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }

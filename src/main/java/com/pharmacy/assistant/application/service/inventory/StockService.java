@@ -34,7 +34,6 @@ public class StockService implements ManageStockUseCase {
     private final StockRepository stockRepository;
     private final ProductRepository productRepository;
     private final StockMapper stockMapper;
-
     @Override
     public StockResponse createStock(CreateStockRequest request) {
         log.info("Creating new stock for product: {}, batch: {}",
@@ -52,6 +51,16 @@ public class StockService implements ManageStockUseCase {
         }
 
         Stock stock = stockMapper.toDomain(request);
+
+        // --- EKLENEN KISIM BAŞLANGIÇ ---
+        // Yeni oluşturulan stoğun miktarını kontrol et ve durumu ona göre ayarla
+        if (stock.isOutOfStock()) {
+            stock.setStatus(StockStatus.OUT_OF_STOCK);
+        } else if (stock.isBelowMinimumLevel()) {
+            stock.setStatus(StockStatus.LOW_STOCK);
+        }
+        // --- EKLENEN KISIM BİTİŞ ---
+
         stock.prePersist();
 
         Stock savedStock = stockRepository.save(stock);
@@ -59,7 +68,6 @@ public class StockService implements ManageStockUseCase {
         log.info("Stock created successfully with ID: {}", savedStock.getId());
         return stockMapper.toResponse(savedStock, product.getName());
     }
-
     @Override
     public StockResponse updateStock(UUID id, UpdateStockRequest request) {
         log.info("Updating stock with ID: {}", id);
@@ -68,6 +76,16 @@ public class StockService implements ManageStockUseCase {
                 .orElseThrow(() -> new StockNotFoundException("Stok bulunamadı: " + id));
 
         stockMapper.updateDomainFromRequest(stock, request);
+
+        // --- EKLENEN KISIM: Güncelleme sonrası durum kontrolü ---
+        if (stock.isOutOfStock()) {
+            stock.setStatus(StockStatus.OUT_OF_STOCK);
+        } else if (stock.isBelowMinimumLevel()) {
+            stock.setStatus(StockStatus.LOW_STOCK);
+        } else if (!stock.isExpired() && !StockStatus.RESERVED.equals(stock.getStatus()) && !StockStatus.DAMAGED.equals(stock.getStatus())) {
+            // Eğer stok yeterliyse ve özel bir durumu (Rezerve/Hasarlı) yoksa AVAILABLE yap
+            stock.setStatus(StockStatus.AVAILABLE);
+        }
         stock.prePersist();
 
         Stock updatedStock = stockRepository.save(stock);

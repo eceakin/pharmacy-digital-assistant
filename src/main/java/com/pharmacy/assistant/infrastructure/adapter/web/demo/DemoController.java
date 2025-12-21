@@ -89,7 +89,7 @@ public class DemoController {
         Map<String, Object> response = new HashMap<>();
         response.put("medicationNotifications", result.medicationNotifications);
         response.put("prescriptionNotifications", result.prescriptionNotifications);
-        response.put("stockNotifications", result.stockNotifications);
+      //  response.put("stockNotifications", result.stockNotifications);
         response.put("totalNotifications", result.getTotalNotifications());
         response.put("message", result.getTotalNotifications() > 0 ?
                 "✅ Toplam " + result.getTotalNotifications() + " bildirim gönderildi!" :

@@ -189,15 +189,15 @@ public class NotificationTriggerService {
         // ✅ Settings'den gün sayılarını al
         int medicationDays = settingsService.getMedicationExpiryWarningDays();
         int prescriptionDays = settingsService.getPrescriptionExpiryWarningDays();
-        int stockDays = settingsService.getStockExpiryWarningDays();
+        //int stockDays = settingsService.getStockExpiryWarningDays();
 
         log.info("📋 Using settings: Medication={} days, Prescription={} days, Stock={} days",
-                medicationDays, prescriptionDays, stockDays);
+                medicationDays, prescriptionDays);
 
         NotificationCheckResult result = new NotificationCheckResult();
         result.medicationNotifications = checkAndNotifyExpiringMedications(medicationDays);
         result.prescriptionNotifications = checkAndNotifyExpiringPrescriptions(prescriptionDays);
-        result.stockNotifications = checkAndNotifyExpiringStocks(stockDays);
+       // result.stockNotifications = checkAndNotifyExpiringStocks(stockDays);
 
         log.info("🏁 Notification check completed. Results: {}", result);
         return result;
@@ -347,10 +347,10 @@ public class NotificationTriggerService {
     public static class NotificationCheckResult {
         public int medicationNotifications = 0;
         public int prescriptionNotifications = 0;
-        public int stockNotifications = 0;
+       // public int stockNotifications = 0;
 
         public int getTotalNotifications() {
-            return medicationNotifications + prescriptionNotifications + stockNotifications;
+            return medicationNotifications + prescriptionNotifications ;
         }
 
         @Override
@@ -359,7 +359,7 @@ public class NotificationTriggerService {
                     "Medications: %d, Prescriptions: %d, Stocks: %d, Total: %d",
                     medicationNotifications,
                     prescriptionNotifications,
-                    stockNotifications,
+                  //  stockNotifications,
                     getTotalNotifications()
             );
         }

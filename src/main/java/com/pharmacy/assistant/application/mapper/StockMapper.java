@@ -91,6 +91,7 @@ public class StockMapper {
                 .batchNumber(stock.getBatchNumber())
                 .expiryDate(stock.getExpiryDate())
                 .quantity(stock.getQuantity())
+                .minimumStockLevel(stock.getMinimumStockLevel())
                 .status(stock.getStatus())
                 .daysUntilExpiry(stock.getDaysUntilExpiry())
                 .isNearExpiry(stock.isNearExpiry(90))
