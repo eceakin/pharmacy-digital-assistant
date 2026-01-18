@@ -33,7 +33,7 @@ public class EmailServiceImpl implements EmailService {
 
     @Value("${pharmacy.email.from-name:Eczane Dijital Asistan}")
     private String fromName;
-
+//deneme
     @Override
     public void sendSimpleEmail(String to, String subject, String text) {
         try {
