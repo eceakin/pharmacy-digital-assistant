@@ -33,3 +33,6 @@ build/
 .vscode/
 application-prod.yml
 *.log
+
+### Local secrets ###
+.env
